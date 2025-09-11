@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import Header from "@/components/Header";
+import SyncUserWithConvex from "@/components/SyncUserWithConvex";
 
 export const metadata: Metadata = {
   title: "EventBay",
@@ -24,8 +25,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className}`}>
         <ClerkProvider>
-          <Header/>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <Header />
+          <ConvexClientProvider>
+            <SyncUserWithConvex />
+            {children}
+          </ConvexClientProvider>
         </ClerkProvider>
       </body>
     </html>
