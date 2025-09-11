@@ -2,9 +2,9 @@
 
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
-import EventCard from "./EventCard";
-import Spinner from "./Spinner";
 import { CalendarDays, Ticket } from "lucide-react";
+import Spinner from "./Spinner";
+import EventCard from "./EventCard";
 
 export default function EventList() {
   const events = useQuery(api.events.get);
