@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { Ticket } from "lucide-react";
+import ReleaseTicket from "./ReleaseTicket";
 
 export default function PurchaseTicket({ eventId }: { eventId: Id<"events"> }) {
   const router = useRouter();
