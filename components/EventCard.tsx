@@ -18,6 +18,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useStorageUrl } from "@/lib/utils";
 import Image from "next/image";
+import PurchaseTicket from "./PurchaseTicket";
 
 export default function EventCard({ eventId }: { eventId: Id<"events"> }) {
   const { user } = useUser();
@@ -126,24 +127,24 @@ export default function EventCard({ eventId }: { eventId: Id<"events"> }) {
       );
     }
 
-    // if (queuePosition) {
-    //   return (
-    //     <div className="mt-4">
-    //       {queuePosition.status === "offered" && (
-    //         < PurchaseTicket eventId={eventId} />
-    //       )}
-    //       {renderQueuePosition()}
-    //       {queuePosition.status === "expired" && (
-    //         <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-    //           <span className="text-red-700 font-medium flex items-center">
-    //             <XCircle className="w-5 h-5 mr-2" />
-    //             Offer expired
-    //           </span>
-    //         </div>
-    //       )}
-    //     </div>
-    //   );
-    // }
+    if (queuePosition) {
+      return (
+        <div className="mt-4">
+          {queuePosition.status === "offered" && (
+            < PurchaseTicket eventId={eventId} />
+          )}
+          {renderQueuePosition()}
+          {queuePosition.status === "expired" && (
+            <div className="p-3 bg-red-50 rounded-lg border border-red-100">
+              <span className="text-red-700 font-medium flex items-center">
+                <XCircle className="w-5 h-5 mr-2" />
+                Offer expired
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    }
 
     return null;
   };
