@@ -105,15 +105,15 @@ export const joinWaitingList = mutation({
   // Function takes an event ID and user ID as arguments
   args: { eventId: v.id("events"), userId: v.string() },
   handler: async (ctx, { eventId, userId }) => {
-    // Rate limit check
-    const status = await rateLimiter.limit(ctx, "queueJoin", { key: userId });
-    if (!status.ok) {
-      throw new ConvexError(
-        `You've joined the waiting list too many times. Please wait ${Math.ceil(
-          status.retryAfter / (60 * 1000)
-        )} minutes before trying again.`
-      );
-    }
+    // // Rate limit check
+    // const status = await rateLimiter.limit(ctx, "queueJoin", { key: userId });
+    // if (!status.ok) {
+    //   throw new ConvexError(
+    //     `You've joined the waiting list too many times. Please wait ${Math.ceil(
+    //       status.retryAfter / (60 * 1000)
+    //     )} minutes before trying again.`
+    //   );
+    // }
 
     // First check if user already has an active entry in waiting list for this event
     // Active means any status except EXPIRED
