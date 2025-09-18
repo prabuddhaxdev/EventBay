@@ -1,9 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import { DURATIONS, WAITING_LIST_STATUS, TICKET_STATUS } from "./constants";
-import { components, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { processQueue } from "./waitingList";
-import { MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 
 export type Metrics = {
   soldTickets: number;
@@ -12,14 +11,7 @@ export type Metrics = {
   revenue: number;
 };
 
-// Initialize rate limiter
-const rateLimiter = new RateLimiter(components.rateLimiter, {
-  queueJoin: {
-    kind: "fixed window",
-    rate: 3, // 3 joins allowed
-    period: 30 * MINUTE, // in 30 minutes
-  },
-});
+
 
 export const get = query({
   args: {},
