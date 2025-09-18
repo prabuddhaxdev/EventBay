@@ -22,7 +22,7 @@ import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Id } from "@/convex/_generated/dataModel";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"; // ✅ changed import
 import { useStorageUrl } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -63,7 +63,6 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
   const updateEvent = useMutation(api.events.updateEvent);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
   const currentImageUrl = useStorageUrl(initialData?.imageStorageId);
 
   // Image upload
@@ -125,6 +124,7 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             });
           }
 
+          toast.success("Event created successfully!"); // ✅ updated
           router.push(`/event/${eventId}`);
         } else {
           // Ensure initialData exists before proceeding with update
@@ -150,19 +150,12 @@ export default function EventForm({ mode, initialData }: EventFormProps) {
             });
           }
 
-          toast({
-            title: "Event updated",
-            description: "Your event has been successfully updated.",
-          });
-
+          toast.success("Event updated successfully!"); // ✅ updated
           router.push(`/event/${initialData._id}`);
         }
       } catch (error) {
         console.error("Failed to handle event:", error);
-        toast({
-          title: "Uh oh! Something went wrong.",
-          description: "There was a problem with your request.",
-        });
+        toast.error("Something went wrong. Please try again."); // ✅ updated
       }
     });
   }

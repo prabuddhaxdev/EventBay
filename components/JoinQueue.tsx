@@ -6,8 +6,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { WAITING_LIST_STATUS } from "@/convex/constants";
 import Spinner from "./Spinner";
 import { Clock, OctagonXIcon } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { ConvexError } from "convex/values";
+import { toast } from "sonner";
 
 export default function JoinQueue({
   eventId,
@@ -16,7 +16,6 @@ export default function JoinQueue({
   eventId: Id<"events">;
   userId: string;
 }) {
-  const { toast } = useToast();
   const joinWaitingList = useMutation(api.events.joinWaitingList);
   const queuePosition = useQuery(api.waitingList.getQueuePosition, {
     eventId,
@@ -36,25 +35,22 @@ export default function JoinQueue({
       const result = await joinWaitingList({ eventId, userId });
       if (result.success) {
         console.log("Successfully joined waiting list");
+        toast.success("You’ve successfully joined the waiting list.");
       }
     } catch (error) {
       if (
         error instanceof ConvexError &&
         error.message.includes("joined the waiting list too many times")
       ) {
-        toast({
-          variant: "destructive",
-          title: "Slow down there!",
-          description: error.data,
-          duration: 5000,
-        });
+        toast.error(
+          error.data ?? "You joined the waiting list too many times.",
+          {
+            duration: 5000,
+          }
+        );
       } else {
         console.error("Error joining waiting list:", error);
-        toast({
-          variant: "destructive",
-          title: "Uh oh! Something went wrong.",
-          description: "Failed to join queue. Please try again later.",
-        });
+        toast.error("Failed to join queue. Please try again later.");
       }
     }
   };

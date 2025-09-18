@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Ban } from "lucide-react";
 import { refundEventTickets } from "@/app/actions/refundEventTickets";
 import { Id } from "@/convex/_generated/dataModel";
-import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
 
 export default function CancelEventButton({
   eventId,
@@ -15,7 +15,6 @@ export default function CancelEventButton({
   eventId: Id<"events">;
 }) {
   const [isCancelling, setIsCancelling] = useState(false);
-  const { toast } = useToast();
   const router = useRouter();
   const cancelEvent = useMutation(api.events.cancelEvent);
 
@@ -32,18 +31,14 @@ export default function CancelEventButton({
     try {
       await refundEventTickets(eventId);
       await cancelEvent({ eventId });
-      toast({
-        title: "Event cancelled",
-        description: "All tickets have been refunded successfully.",
-      });
+
+      // ✅ Success toast
+      toast.success("Event cancelled. All tickets have been refunded.");
+
       router.push("/seller/events");
     } catch (error) {
       console.error("Failed to cancel event:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to cancel event. Please try again.",
-      });
+      toast.error("Failed to cancel event. Please try again.");
     } finally {
       setIsCancelling(false);
     }
