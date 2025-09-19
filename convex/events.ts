@@ -3,6 +3,8 @@ import { ConvexError, v } from "convex/values";
 import { DURATIONS, WAITING_LIST_STATUS, TICKET_STATUS } from "./constants";
 import { components, internal } from "./_generated/api";
 import { MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 export type Metrics = {
   soldTickets: number;
@@ -19,6 +21,48 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
     period: 30 * MINUTE, // in 30 minutes
   },
 });
+
+// Helper function to check ticket availability - this is a regular function, not a query
+async function getAvailability(ctx: QueryCtx | MutationCtx, eventId: Id<"events">) {
+  const event = await ctx.db.get(eventId);
+  if (!event) throw new Error("Event not found");
+
+  // Count total purchased tickets
+  const purchasedCount = await ctx.db
+    .query("tickets")
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .collect()
+    .then(
+      (tickets: Doc<"tickets">[]) =>
+        tickets.filter(
+          (t: Doc<"tickets">) =>
+            t.status === TICKET_STATUS.VALID ||
+            t.status === TICKET_STATUS.USED
+        ).length
+    );
+
+  // Count current valid offers
+  const now = Date.now();
+  const activeOffers = await ctx.db
+    .query("waitingList")
+    .withIndex("by_event_status", (q) =>
+      q.eq("eventId", eventId).eq("status", WAITING_LIST_STATUS.OFFERED)
+    )
+    .collect()
+    .then(
+      (entries: Doc<"waitingList">[]) => entries.filter((e: Doc<"waitingList">) => (e.offerExpiresAt ?? 0) > now).length
+    );
+
+  const availableSpots = event.totalTickets - (purchasedCount + activeOffers);
+
+  return {
+    available: availableSpots > 0,
+    availableSpots,
+    totalTickets: event.totalTickets,
+    purchasedCount,
+    activeOffers,
+  };
+}
 
 export const get = query({
   args: {},
@@ -61,48 +105,11 @@ export const create = mutation({
   },
 });
 
-// Helper function to check ticket availability for an event
+// Query version of availability check (for external calls)
 export const checkAvailability = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
-    const event = await ctx.db.get(eventId);
-    if (!event) throw new Error("Event not found");
-
-    // Count total purchased tickets
-    const purchasedCount = await ctx.db
-      .query("tickets")
-      .withIndex("by_event", (q) => q.eq("eventId", eventId))
-      .collect()
-      .then(
-        (tickets) =>
-          tickets.filter(
-            (t) =>
-              t.status === TICKET_STATUS.VALID ||
-              t.status === TICKET_STATUS.USED
-          ).length
-      );
-
-    // Count current valid offers
-    const now = Date.now();
-    const activeOffers = await ctx.db
-      .query("waitingList")
-      .withIndex("by_event_status", (q) =>
-        q.eq("eventId", eventId).eq("status", WAITING_LIST_STATUS.OFFERED)
-      )
-      .collect()
-      .then(
-        (entries) => entries.filter((e) => (e.offerExpiresAt ?? 0) > now).length
-      );
-
-    const availableSpots = event.totalTickets - (purchasedCount + activeOffers);
-
-    return {
-      available: availableSpots > 0,
-      availableSpots,
-      totalTickets: event.totalTickets,
-      purchasedCount,
-      activeOffers,
-    };
+    return await getAvailability(ctx, eventId);
   },
 });
 
@@ -140,8 +147,8 @@ export const joinWaitingList = mutation({
     const event = await ctx.db.get(eventId);
     if (!event) throw new Error("Event not found");
 
-    // Check if there are any available tickets right now
-    const { available } = await checkAvailability(ctx, { eventId });
+    // Check if there are any available tickets right now - using helper function
+    const { available } = await getAvailability(ctx, eventId);
 
     const now = Date.now();
 
@@ -282,7 +289,7 @@ export const getUserTickets = query({
       .collect();
 
     const ticketsWithEvents = await Promise.all(
-      tickets.map(async (ticket) => {
+      tickets.map(async (ticket: Doc<"tickets">) => {
         const event = await ctx.db.get(ticket.eventId);
         return {
           ...ticket,
@@ -305,7 +312,7 @@ export const getUserWaitingList = query({
       .collect();
 
     const entriesWithEvents = await Promise.all(
-      entries.map(async (entry) => {
+      entries.map(async (entry: Doc<"waitingList">) => {
         const event = await ctx.db.get(entry.eventId);
         return {
           ...entry,
@@ -330,9 +337,9 @@ export const getEventAvailability = query({
       .withIndex("by_event", (q) => q.eq("eventId", eventId))
       .collect()
       .then(
-        (tickets) =>
+        (tickets: Doc<"tickets">[]) =>
           tickets.filter(
-            (t) =>
+            (t: Doc<"tickets">) =>
               t.status === TICKET_STATUS.VALID ||
               t.status === TICKET_STATUS.USED
           ).length
@@ -347,7 +354,7 @@ export const getEventAvailability = query({
       )
       .collect()
       .then(
-        (entries) => entries.filter((e) => (e.offerExpiresAt ?? 0) > now).length
+        (entries: Doc<"waitingList">[]) => entries.filter((e: Doc<"waitingList">) => (e.offerExpiresAt ?? 0) > now).length
       );
 
     const totalReserved = purchasedCount + activeOffers;
@@ -370,7 +377,7 @@ export const search = query({
       .filter((q) => q.eq(q.field("is_cancelled"), undefined))
       .collect();
 
-    return events.filter((event) => {
+    return events.filter((event: Doc<"events">) => {
       const searchTermLower = searchTerm.toLowerCase();
       return (
         event.name.toLowerCase().includes(searchTermLower) ||
@@ -391,18 +398,18 @@ export const getSellerEvents = query({
 
     // For each event, get ticket sales data
     const eventsWithMetrics = await Promise.all(
-      events.map(async (event) => {
+      events.map(async (event: Doc<"events">) => {
         const tickets = await ctx.db
           .query("tickets")
           .withIndex("by_event", (q) => q.eq("eventId", event._id))
           .collect();
 
         const validTickets = tickets.filter(
-          (t) => t.status === "valid" || t.status === "used"
+          (t: Doc<"tickets">) => t.status === "valid" || t.status === "used"
         );
-        const refundedTickets = tickets.filter((t) => t.status === "refunded");
+        const refundedTickets = tickets.filter((t: Doc<"tickets">) => t.status === "refunded");
         const cancelledTickets = tickets.filter(
-          (t) => t.status === "cancelled"
+          (t: Doc<"tickets">) => t.status === "cancelled"
         );
 
         const metrics: Metrics = {
