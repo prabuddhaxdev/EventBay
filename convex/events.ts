@@ -67,10 +67,27 @@ async function getAvailability(ctx: QueryCtx | MutationCtx, eventId: Id<"events"
 export const get = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
+    const now = Date.now();
+    const events = await ctx.db
       .query("events")
-      .filter((q) => q.eq(q.field("is_cancelled"), undefined))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("is_cancelled"), undefined),
+          q.gt(q.field("eventDate"), now)
+        )
+      )
+      .order("desc")
       .collect();
+
+    return events;
+  },
+});
+
+// Debug query to get all events (for testing)
+export const getAllEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("events").collect();
   },
 });
 
@@ -372,9 +389,15 @@ export const getEventAvailability = query({
 export const search = query({
   args: { searchTerm: v.string() },
   handler: async (ctx, { searchTerm }) => {
+    const now = Date.now();
     const events = await ctx.db
       .query("events")
-      .filter((q) => q.eq(q.field("is_cancelled"), undefined))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("is_cancelled"), undefined),
+          q.gt(q.field("eventDate"), now)
+        )
+      )
       .collect();
 
     return events.filter((event: Doc<"events">) => {
