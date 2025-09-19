@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /* config options here */
   images: {
-    domains: [
-      process.env.NEXT_PUBLIC_CONVEX_URL
-        ?.replace(/^https?:\/\//, '') // Remove protocol (https://)
-        .split('/')[0] || '', // Keep only hostname
+    remotePatterns: [
+      { hostname: "adept-bat-395.convex.cloud", protocol: "https" },
+      { hostname: "usable-mallard-840.convex.cloud", protocol: "https" },
     ],
   },
 };
